@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>🔒 Защищённый файл</h2>
+        <form method="POST">
+            <div class="form-group">
+                <label>PIN-код</label>
+                <input type="password" name="pin_code" required minlength="4" placeholder="Введите PIN">
+            </div>
+            <button type="submit" class="btn btn-primary">Скачать</button>
+        </form>
+        <p class="auth-footer">
+            <a href="{{ url_for('dashboard') }}">← Назад</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

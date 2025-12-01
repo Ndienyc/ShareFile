@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Панель — Файлообменник{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box" style="max-width: 800px; width: 90%;">
+        <h2>📤 Загрузить файл</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Файл</label>
+                <input type="file" id="file" name="file" required>
+            </div>
+            <div class="form-group">
+                <label for="pin_code">PIN-код (мин. 4 символа)</label>
+                <input type="text" id="pin_code" name="pin_code" minlength="4" required placeholder="Например: 1234">
+            </div>
+            <div class="form-group">
+                <label for="download_limit">Лимит скачиваний (1–100)</label>
+                <input type="number" id="download_limit" name="download_limit" min="1" max="100" value="5" required>
+            </div>
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; color: var(--text-primary);">
+                    <input type="checkbox" name="auto_delete" value="1" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                    Удалить файл после исчерпания лимита скачиваний
+                </label>
+                <p style="margin-top: 6px; font-size: 13px; color: var(--text-muted);">
+                    Если отмечено — файл будет автоматически удалён с сервера, как только будет скачан указанное число раз.
+                </p>
+            </div>
+            <button type="submit" class="btn btn-primary">Загрузить файл</button>
+        </form>
+    </div>
+
+    {% if files %}
+    <div class="auth-box" style="max-width: 800px; width: 90%; margin-top: 30px;">
+        <h2>📁 Мои файлы</h2>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: var(--radius-md); background: white;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white;">
+                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Файл</th>
+                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Скачиваний</th>
+                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Автоудаление</th>
+                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in files %}
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 12px 16px; word-break: break-all; max-width: 200px;">{{ f.filename }}</td>
+                        <td style="padding: 12px 16px;">{{ f.download_count }} / {{ f.download_limit }}</td>
+                        <td style="padding: 12px 16px;">
+                            {% if f.auto_delete %}
+                                <span style="color: var(--success); display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                    </svg>
+                                    Да
+                                </span>
+                            {% else %}
+                                <span style="color: var(--text-muted);">Нет</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 16px; white-space: nowrap;">
+                            <a href="{{ f.download_url }}" target="_blank"
+                               style="display: inline-block; margin-right: 8px; padding: 6px 12px; background: var(--primary); color: white; text-decoration: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;">
+                                Скачать
+                            </a>
+                            <form method="POST" action="{{ url_for('delete_file', token=f.token) }}"
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('Удалить \\'{{ f.filename }}\\' ?');">
+                                <button type="submit"
+                                        style="padding: 6px 12px; background: var(--danger); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500;">
+                                    Удалить
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="auth-box" style="max-width: 800px; width: 90%; margin-top: 30px;">
+        <p style="text-align: center; color: var(--text-muted);">У вас пока нет загруженных файлов.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
