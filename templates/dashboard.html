@@ -1,21 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Панель — Файлообменник (Free){% endblock %}
+{% block title %}Панель — Файлообменник{% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 24px;">
     <h2>👋 Привет, {{ username }}!</h2>
-    {% if username != 'admin' %}
-    <p style="color: var(--text-secondary);">Free-версия: макс. 5 МБ, 5 файлов, лимит скачиваний = 5</p>
-    {% else %}
     <p style="color: var(--text-secondary);">Управляйте файлами и делитесь ссылками.</p>
-    {% endif %}
 </div>
 
 {% if new_link %}
 <div class="auth-box" style="margin-bottom: 30px; border: 2px solid var(--success); background: #f0fdf4;">
     <h3 style="color: var(--success); margin-bottom: 10px;">✅ Файл успешно загружен!</h3>
-    <p style="margin-bottom: 10px; color: var(--text-secondary);">Ваша ссылка для скачивания:</p>
+    <p style="margin-bottom: 10px;">Ваша ссылка для скачивания:</p>
     <div style="display: flex; gap: 10px; margin-bottom: 15px;">
         <input type="text" value="{{ new_link }}" readonly
                id="new-link-input"
@@ -29,7 +25,7 @@
     {% if qr_code_data %}
     <div style="text-align: center; margin-top: 15px;">
         <p style="margin-bottom: 8px; color: var(--text-secondary);">Или отсканируйте QR-код:</p>
-        <img src="image/png;base64,{{ qr_code_data }}" alt="QR Code" style="width: 160px; height: 160px; border: 1px solid #cbd5e1; border-radius: 8px;">
+        <img src="data:image/png;base64,{{ qr_code_data }}" alt="QR Code" style="width: 160px; height: 160px; border: 1px solid #cbd5e1; border-radius: 8px;">
     </div>
     {% endif %}
 </div>
@@ -58,7 +54,6 @@
                 <label for="pin_code">PIN-код</label>
                 <input type="text" id="pin_code" name="pin_code" minlength="4" required placeholder="Мин. 4 символа">
             </div>
-            {% if username == 'admin' %}
             <div class="form-group">
                 <label for="download_limit">Лимит скачиваний</label>
                 <input type="number" id="download_limit" name="download_limit" min="1" max="100" value="5" required>
@@ -72,12 +67,6 @@
                     </div>
                 </label>
             </div>
-            {% else %}
-            <div class="form-group">
-                <label>Лимит скачиваний</label>
-                <input type="text" value="5" readonly style="background: #f1f5f9; padding: 12px; border: 1px solid #e2e8f0; border-radius: var(--radius-md); color: var(--text-muted);">
-            </div>
-            {% endif %}
             <button type="submit" class="btn btn-primary">Загрузить 🚀</button>
         </form>
     </div>
@@ -91,9 +80,7 @@
                     <tr>
                         <th>Имя файла</th>
                         <th style="text-align: center;">Лимит</th>
-                        {% if username == 'admin' %}
                         <th style="text-align: center;">Автоуд.</th>
-                        {% endif %}
                         <th style="text-align: right;">Действия</th>
                     </tr>
                 </thead>
@@ -109,11 +96,9 @@
                                 {{ f.download_count }} / {{ f.download_limit }}
                             </span>
                         </td>
-                        {% if username == 'admin' %}
                         <td style="text-align: center;">
                             {{ '✅' if f.auto_delete else '<span style="color:#cbd5e1">✖️</span>'|safe }}
                         </td>
-                        {% endif %}
                         <td style="text-align: right; white-space: nowrap;">
                             <button type="button" onclick="copyLink('{{ request.url_root }}f/{{ f.token }}')" class="action-btn btn-icon-copy">🔗</button>
                             <a href="{{ f.download_url }}" target="_blank" class="action-btn btn-icon-dl">⬇️</a>
