@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Файлообменник{% endblock %}</title>
+    <title>{% block title %}Файлообменник (Free){% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <h1 class="logo">📦 Файлообменник</h1>
+            <h1 class="logo">📦 Файлообменник <span style="font-size: 12px; opacity: 0.7;">(Free)</span></h1>
             {% if session.username %}
             <div class="nav-links">
                 <span class="username">👤 {{ session.username }}</span>
@@ -35,9 +35,5 @@
 
         {% block content %}{% endblock %}
     </div>
-
-    <footer>
-        <p>&copy; 2025 Файлообменник | Безопасный обмен файлами</p>
-    </footer>
 </body>
 </html>
