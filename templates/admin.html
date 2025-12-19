@@ -1,13 +1,146 @@
 {% extends "base.html" %}
 
-{% block title %}Админ-панель — Файлообменник{% endblock %}
+{% block title %}Админ-панель{% endblock %}
 
 {% block content %}
-<div class="dashboard">
-    <h2>🔐 Административная панель</h2>
-    <p>Привет, администратор <strong>{{ username }}</strong>!</p>
-    <p>Здесь будет управление пользователями и файлами.</p>
-
-    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">← Назад</a>
+<div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h2>🔐 Админ-центр</h2>
+        <p style="color: var(--text-secondary);">Управление системой и статистика</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="width: auto;">← В кабинет</a>
 </div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 40px;">
+    <div class="auth-box" style="padding: 24px; text-align: center; border-bottom: 4px solid var(--primary);">
+        <div style="font-size: 32px; margin-bottom: 8px;">👥</div>
+        <h3 style="font-size: 36px; color: var(--text-primary); margin-bottom: 4px;">{{ stats.users }}</h3>
+        <p style="color: var(--text-muted); font-weight: 600;">Пользователей</p>
+    </div>
+    <div class="auth-box" style="padding: 24px; text-align: center; border-bottom: 4px solid var(--secondary);">
+        <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+        <h3 style="font-size: 36px; color: var(--text-primary); margin-bottom: 4px;">{{ stats.files }}</h3>
+        <p style="color: var(--text-muted); font-weight: 600;">Всего файлов</p>
+    </div>
+    <div class="auth-box" style="padding: 24px; text-align: center; border-bottom: 4px solid var(--success);">
+        <div style="font-size: 32px; margin-bottom: 8px;">⬇️</div>
+        <h3 style="font-size: 36px; color: var(--text-primary); margin-bottom: 4px;">{{ stats.downloads }}</h3>
+        <p style="color: var(--text-muted); font-weight: 600;">Скачиваний</p>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="auth-box">
+        <h3>👥 Пользователи</h3>
+        <div class="file-table-container" style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Логин</th>
+                        <th style="text-align: right;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td style="font-weight: 600;">
+                            {{ u }}
+                            {% if u == 'admin' %}
+                            <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px;">ADMIN</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            {% if u != 'admin' %}
+                            <form method="POST" action="{{ url_for('delete_user_route', username=u) }}" onsubmit="return confirm('Удалить пользователя и все его файлы?');">
+                                <button class="action-btn btn-icon-del" title="Бан">❌</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="auth-box">
+        <h3>🗄️ Все файлы</h3>
+        <div class="file-table-container" style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Файл</th>
+                        <th style="text-align: center;">Инфо</th>
+                        <th style="text-align: right;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in files %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ f.filename }}</div>
+                            <div style="font-size: 11px; color: var(--primary);">👤 {{ f.uploader }}</div>
+                        </td>
+                        <td style="text-align: center; font-size: 12px;">
+                            {{ f.download_count }}/{{ f.download_limit }}
+                        </td>
+                        <td style="text-align: right;">
+                            <button type="button" onclick="copyLink('{{ f.download_url }}')" class="action-btn btn-icon-copy">🔗</button>
+                            <a href="{{ f.download_url }}" target="_blank" class="action-btn btn-icon-dl">⬇️</a>
+                            <button type="button" onclick="showQR('{{ url_for('generate_qr', token=f.token) }}', '{{ f.filename }}')" class="action-btn" style="background: none; border: none; font-size: 18px; cursor: pointer;">📱</button>
+                            <form method="POST" action="{{ url_for('delete_file', token=f.token) }}" style="display: inline-block;" onsubmit="return confirm('Удалить принудительно?');">
+                                <button class="action-btn btn-icon-del">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="qrModal" class="auth-box" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 90%; max-width: 320px; padding: 24px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+    <div style="text-align: center;">
+        <h3 id="qrFilename" style="margin: 0 0 16px; font-size: 16px; font-weight: 600; color: var(--text-primary); word-break: break-all;"></h3>
+        <img id="qrImage" src="" alt="QR Code" style="width: 240px; height: 240px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
+        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Отсканируйте для скачивания</p>
+    </div>
+    <button onclick="closeQRModal()" style="margin-top: 16px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">Закрыть</button>
+</div>
+
+<div id="qrOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none;" onclick="closeQRModal()"></div>
+
+<script>
+    function copyLink(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => alert('Ссылка скопирована!')).catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
+        }
+    }
+    function fallbackCopy(text) {
+        try {
+            var ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand('copy') ? alert('Ссылка скопирована!') : prompt("Скопируйте:", text);
+            document.body.removeChild(ta);
+        } catch (err) { prompt("Скопируйте:", text); }
+    }
+
+    function showQR(qrUrl, filename) {
+        document.getElementById('qrFilename').textContent = filename;
+        document.getElementById('qrImage').src = qrUrl;
+        document.getElementById('qrModal').style.display = 'block';
+        document.getElementById('qrOverlay').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeQRModal() {
+        document.getElementById('qrModal').style.display = 'none';
+        document.getElementById('qrOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+</script>
 {% endblock %}
