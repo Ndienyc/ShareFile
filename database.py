@@ -44,7 +44,8 @@ def register_user(username, password):
 
 def verify_user(username, password):
     with sqlite3.connect(DB_FILE) as conn:
-        return conn.execute('SELECT 1 FROM users WHERE username = ? AND password_hash = ?', (username, password)).fetchone() is not None
+        return conn.execute('SELECT 1 FROM users WHERE username = ? AND password_hash = ?',
+                            (username, password)).fetchone() is not None
 
 def get_all_users():
     with sqlite3.connect(DB_FILE) as conn:
@@ -67,64 +68,69 @@ def get_file_by_token(token):
         ''', (token,)).fetchone()
     if row:
         return {
-            'filename': row[0],
-            'storage_path': row[1],
-            'pin_code': row[2],
-            'download_limit': row[3],
-            'download_count': row[4],
-            'uploader': row[5],
-            'auto_delete': bool(row[6])
+            'filename': row[0], 'storage_path': row[1], 'pin_code': row[2],
+            'download_limit': row[3], 'download_count': row[4],
+            'uploader': row[5], 'auto_delete': bool(row[6])
         }
     return None
 
 def increment_download_count_and_delete_if_needed(token):
     with sqlite3.connect(DB_FILE) as conn:
-        row = conn.execute('''
-            SELECT download_count, download_limit, auto_delete, storage_path
-            FROM files WHERE token = ?
-        ''', (token,)).fetchone()
-        if not row:
-            return None, False, False
+        row = conn.execute(
+            'SELECT download_count, download_limit, auto_delete, storage_path FROM files WHERE token = ?',
+            (token,)).fetchone()
+        if not row: return None, False, False
 
-        current_count = row[0]
-        download_limit = row[1]
-        auto_delete = bool(row[2])
-        storage_path = row[3]
-
-        new_count = current_count + 1
-        should_delete = (new_count >= download_limit) and auto_delete
+        new_count = row[0] + 1
+        should_delete = (new_count >= row[1]) and bool(row[2])
 
         if should_delete:
             conn.execute('DELETE FROM files WHERE token = ?', (token,))
         else:
             conn.execute('UPDATE files SET download_count = ? WHERE token = ?', (new_count, token))
 
-        return storage_path, should_delete, auto_delete
+        return row[3], should_delete, bool(row[2])
 
 def get_user_files(username):
     with sqlite3.connect(DB_FILE) as conn:
         rows = conn.execute('''
             SELECT token, filename, download_limit, download_count, auto_delete, created_at
-            FROM files WHERE uploader = ?
-            ORDER BY created_at DESC
+            FROM files WHERE uploader = ? ORDER BY created_at DESC
         ''', (username,)).fetchall()
     return [{
-        'token': r[0],
-        'filename': r[1],
-        'download_limit': r[2],
-        'download_count': r[3],
-        'auto_delete': bool(r[4]),
-        'created_at': r[5],
-        'download_url': f"/f/{r[0]}"
+        'token': r[0], 'filename': r[1], 'download_limit': r[2], 'download_count': r[3],
+        'auto_delete': bool(r[4]), 'created_at': r[5], 'download_url': f"/f/{r[0]}", 'storage_path': ''
     } for r in rows]
 
 def delete_file_by_token(token, uploader):
     with sqlite3.connect(DB_FILE) as conn:
-        row = conn.execute('''
-            SELECT storage_path FROM files WHERE token = ? AND uploader = ?
-        ''', (token, uploader)).fetchone()
-        if not row:
-            return None
-        storage_path = row[0]
+        row = conn.execute('SELECT storage_path FROM files WHERE token = ? AND uploader = ?',
+                           (token, uploader)).fetchone()
+        if not row: return None
         conn.execute('DELETE FROM files WHERE token = ? AND uploader = ?', (token, uploader))
-        return storage_path
+        return row[0]
+
+def get_system_stats():
+    with sqlite3.connect(DB_FILE) as conn:
+        users = conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        files = conn.execute('SELECT COUNT(*) FROM files').fetchone()[0]
+        downloads = conn.execute('SELECT SUM(download_count) FROM files').fetchone()[0] or 0
+    return {'users': users, 'files': files, 'downloads': downloads}
+
+def get_all_files_admin():
+    with sqlite3.connect(DB_FILE) as conn:
+        rows = conn.execute(
+            'SELECT token, filename, download_count, download_limit, uploader, created_at FROM files ORDER BY created_at DESC').fetchall()
+    return [{
+        'token': r[0], 'filename': r[1], 'download_count': r[2], 'download_limit': r[3],
+        'uploader': r[4], 'created_at': r[5], 'download_url': f"/f/{r[0]}"
+    } for r in rows]
+
+def delete_user_full(username):
+    if username == 'admin': return False
+    with sqlite3.connect(DB_FILE) as conn:
+        paths = conn.execute('SELECT storage_path FROM files WHERE uploader = ?', (username,)).fetchall()
+        file_paths = [p[0] for p in paths]
+        conn.execute('DELETE FROM users WHERE username = ?', (username,))
+        conn.execute('DELETE FROM files WHERE uploader = ?', (username,))
+    return file_paths
