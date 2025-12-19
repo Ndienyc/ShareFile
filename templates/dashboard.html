@@ -1,79 +1,125 @@
 {% extends "base.html" %}
 
-{% block title %}Панель — Файлообменник{% endblock %}
+{% block title %}Панель — Файлообменник (Free){% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-box" style="max-width: 800px; width: 90%;">
-        <h2>📤 Загрузить файл</h2>
+<div style="margin-bottom: 24px;">
+    <h2>👋 Привет, {{ username }}!</h2>
+    {% if username != 'admin' %}
+    <p style="color: var(--text-secondary);">Free-версия: макс. 5 МБ, 5 файлов, лимит скачиваний = 5</p>
+    {% else %}
+    <p style="color: var(--text-secondary);">Управляйте файлами и делитесь ссылками.</p>
+    {% endif %}
+</div>
+
+{% if new_link %}
+<div class="auth-box" style="margin-bottom: 30px; border: 2px solid var(--success); background: #f0fdf4;">
+    <h3 style="color: var(--success); margin-bottom: 10px;">✅ Файл успешно загружен!</h3>
+    <p style="margin-bottom: 10px; color: var(--text-secondary);">Ваша ссылка для скачивания:</p>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <input type="text" value="{{ new_link }}" readonly
+               id="new-link-input"
+               style="width: 100%; padding: 12px; border: 2px solid #bbf7d0; border-radius: var(--radius-md); background: white; font-family: monospace; color: var(--text-primary);">
+        <button onclick="copyLink(document.getElementById('new-link-input').value)"
+                class="btn btn-primary" style="width: auto; white-space: nowrap;">
+            Копировать 📋
+        </button>
+    </div>
+
+    {% if qr_code_data %}
+    <div style="text-align: center; margin-top: 15px;">
+        <p style="margin-bottom: 8px; color: var(--text-secondary);">Или отсканируйте QR-код:</p>
+        <img src="image/png;base64,{{ qr_code_data }}" alt="QR Code" style="width: 160px; height: 160px; border: 1px solid #cbd5e1; border-radius: 8px;">
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="dashboard-grid">
+    <div class="auth-box">
+        <h3 style="margin-bottom: 20px; color: var(--text-primary);">📤 Загрузить файл</h3>
         <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
-                <label for="file">Файл</label>
-                <input type="file" id="file" name="file" required>
+                <label>Выберите файл</label>
+                <label for="file-upload" class="custom-file-upload" id="file-label">
+                    📂 Нажмите, чтобы выбрать файл
+                </label>
+                <input id="file-upload" type="file" name="file" required onchange="updateFileName(this)">
             </div>
             <div class="form-group">
-                <label for="pin_code">PIN-код (мин. 4 символа)</label>
-                <input type="text" id="pin_code" name="pin_code" minlength="4" required placeholder="Например: 1234">
+                <label for="pin_code">PIN-код</label>
+                <input type="text" id="pin_code" name="pin_code" minlength="4" required placeholder="Мин. 4 символа">
             </div>
+            {% if username == 'admin' %}
             <div class="form-group">
-                <label for="download_limit">Лимит скачиваний (1–100)</label>
+                <label for="download_limit">Лимит скачиваний</label>
                 <input type="number" id="download_limit" name="download_limit" min="1" max="100" value="5" required>
             </div>
             <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; color: var(--text-primary);">
-                    <input type="checkbox" name="auto_delete" value="1" style="width: 18px; height: 18px; accent-color: var(--primary);">
-                    Удалить файл после исчерпания лимита скачиваний
+                <label style="display: flex; gap: 12px; cursor: pointer; align-items: flex-start;">
+                    <input type="checkbox" name="auto_delete" value="1" style="width: 20px; height: 20px; accent-color: var(--primary); margin-top: 2px;">
+                    <div>
+                        <span style="font-weight: 600; color: var(--text-primary);">Удалить после лимита</span>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Файл удалится навсегда после исчерпания лимита.</p>
+                    </div>
                 </label>
-                <p style="margin-top: 6px; font-size: 13px; color: var(--text-muted);">
-                    Если отмечено — файл будет автоматически удалён с сервера, как только будет скачан указанное число раз.
-                </p>
             </div>
-            <button type="submit" class="btn btn-primary">Загрузить файл</button>
+            {% else %}
+            <div class="form-group">
+                <label>Лимит скачиваний</label>
+                <input type="text" value="5" readonly style="background: #f1f5f9; padding: 12px; border: 1px solid #e2e8f0; border-radius: var(--radius-md); color: var(--text-muted);">
+            </div>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">Загрузить 🚀</button>
         </form>
     </div>
 
-    {% if files %}
-    <div class="auth-box" style="max-width: 800px; width: 90%; margin-top: 30px;">
-        <h2>📁 Мои файлы</h2>
-        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: var(--radius-md); background: white;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <div class="auth-box">
+        <h3 style="margin-bottom: 20px; color: var(--text-primary);">📁 Мои файлы</h3>
+        {% if files %}
+        <div class="file-table-container">
+            <table>
                 <thead>
-                    <tr style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white;">
-                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Файл</th>
-                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Скачиваний</th>
-                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Автоудаление</th>
-                        <th style="text-align: left; padding: 12px 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Действия</th>
+                    <tr>
+                        <th>Имя файла</th>
+                        <th style="text-align: center;">Лимит</th>
+                        {% if username == 'admin' %}
+                        <th style="text-align: center;">Автоуд.</th>
+                        {% endif %}
+                        <th style="text-align: right;">Действия</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for f in files %}
-                    <tr style="border-bottom: 1px solid #e2e8f0;">
-                        <td style="padding: 12px 16px; word-break: break-all; max-width: 200px;">{{ f.filename }}</td>
-                        <td style="padding: 12px 16px;">{{ f.download_count }} / {{ f.download_limit }}</td>
-                        <td style="padding: 12px 16px;">
-                            {% if f.auto_delete %}
-                                <span style="color: var(--success); display: flex; align-items: center; gap: 6px;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                    </svg>
-                                    Да
-                                </span>
-                            {% else %}
-                                <span style="color: var(--text-muted);">Нет</span>
-                            {% endif %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ f.filename }}">{{ f.filename }}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">{{ f.created_at }}</div>
                         </td>
-                        <td style="padding: 12px 16px; white-space: nowrap;">
-                            <a href="{{ f.download_url }}" target="_blank"
-                               style="display: inline-block; margin-right: 8px; padding: 6px 12px; background: var(--primary); color: white; text-decoration: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;">
-                                Скачать
-                            </a>
-                            <form method="POST" action="{{ url_for('delete_file', token=f.token) }}"
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('Удалить \\'{{ f.filename }}\\' ?');">
-                                <button type="submit"
-                                        style="padding: 6px 12px; background: var(--danger); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 500;">
-                                    Удалить
-                                </button>
+                        <td style="text-align: center;">
+                            <span style="background: var(--bg-main); padding: 4px 10px; border-radius: 100px; font-size: 12px; border: 1px solid #e2e8f0;">
+                                {{ f.download_count }} / {{ f.download_limit }}
+                            </span>
+                        </td>
+                        {% if username == 'admin' %}
+                        <td style="text-align: center;">
+                            {{ '✅' if f.auto_delete else '<span style="color:#cbd5e1">✖️</span>'|safe }}
+                        </td>
+                        {% endif %}
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button type="button" onclick="copyLink('{{ request.url_root }}f/{{ f.token }}')" class="action-btn btn-icon-copy">🔗</button>
+                            <a href="{{ f.download_url }}" target="_blank" class="action-btn btn-icon-dl">⬇️</a>
+                            <button type="button" onclick="showQR('{{ url_for('generate_qr', token=f.token) }}', '{{ f.filename }}')" class="action-btn" style="background: none; border: none; font-size: 18px; cursor: pointer;">📱</button>
+                            <form method="POST" action="{{ url_for('delete_file', token=f.token) }}" style="display: inline-block;" onsubmit="return confirm('Удалить?');">
+                                <button class="action-btn btn-icon-del">🗑️</button>
                             </form>
                         </td>
                     </tr>
@@ -81,11 +127,68 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: var(--text-muted); border: 2px dashed #e2e8f0; border-radius: var(--radius-md);">
+            <div style="font-size: 48px; margin-bottom: 10px;">📭</div>
+            <p>Файлов нет</p>
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="auth-box" style="max-width: 800px; width: 90%; margin-top: 30px;">
-        <p style="text-align: center; color: var(--text-muted);">У вас пока нет загруженных файлов.</p>
-    </div>
-    {% endif %}
 </div>
+
+<div id="qrModal" class="auth-box" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 90%; max-width: 320px; padding: 24px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+    <div style="text-align: center;">
+        <h3 id="qrFilename" style="margin: 0 0 16px; font-size: 16px; font-weight: 600; color: var(--text-primary); word-break: break-all;"></h3>
+        <img id="qrImage" src="" alt="QR Code" style="width: 240px; height: 240px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
+        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Отсканируйте для скачивания</p>
+    </div>
+    <button onclick="closeQRModal()" style="margin-top: 16px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">Закрыть</button>
+</div>
+
+<div id="qrOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none;" onclick="closeQRModal()"></div>
+
+<script>
+    function updateFileName(input) {
+        var label = document.getElementById('file-label');
+        if (input.files && input.files.length > 0) {
+            label.innerHTML = '📄 ' + input.files[0].name;
+            label.style.borderColor = 'var(--primary)';
+            label.style.color = 'var(--text-primary)';
+            label.style.fontWeight = '600';
+        } else {
+            label.innerHTML = '📂 Нажмите, чтобы выбрать файл';
+        }
+    }
+
+    function copyLink(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => alert('Ссылка скопирована!')).catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
+        }
+    }
+    function fallbackCopy(text) {
+        try {
+            var ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand('copy') ? alert('Ссылка скопирована!') : prompt("Скопируйте:", text);
+            document.body.removeChild(ta);
+        } catch (err) { prompt("Скопируйте:", text); }
+    }
+
+    function showQR(qrUrl, filename) {
+        document.getElementById('qrFilename').textContent = filename;
+        document.getElementById('qrImage').src = qrUrl;
+        document.getElementById('qrModal').style.display = 'block';
+        document.getElementById('qrOverlay').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeQRModal() {
+        document.getElementById('qrModal').style.display = 'none';
+        document.getElementById('qrOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+</script>
 {% endblock %}
